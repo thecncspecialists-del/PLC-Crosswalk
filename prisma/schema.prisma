@@ -1,0 +1,374 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  name                 String?
+  passwordHash         String?
+  role                 Role                  @default(ADMIN)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  mappings             MappingDecision[]     @relation("ReviewerMappings")
+  courseMappingReviews CourseMappingDecision[] @relation("ReviewerCourseDecisions")
+  approvedMappingPlans MappingPlan[]         @relation("ApproverMappingPlans")
+  journeyGroupUpdates  MappingPlanJourneyGroup[] @relation("JourneyGroupUpdatedBy")
+  journeyCourseUpdates MappingPlanJourneyCourse[] @relation("JourneyUpdatedBy")
+  reports              Report[]              @relation("GeneratedReports")
+  actionHistory         ActionHistory[]       @relation("ActorActionHistory")
+  accounts             Account[]
+  sessions             Session[]
+}
+
+enum Role {
+  ADMIN
+}
+
+enum ActionHistoryStatus {
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model ActionHistory {
+  id           String              @id @default(cuid())
+  timestamp    DateTime            @default(now())
+  actorUserId  String?
+  actorEmail   String?
+  actionType   String
+  description  String
+  area         String
+  affectedType String?
+  affectedId   String?
+  status       ActionHistoryStatus
+  metadata     Json?
+  actor        User?               @relation("ActorActionHistory", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([timestamp])
+  @@index([actorUserId, timestamp])
+  @@index([area, timestamp])
+  @@index([actionType, timestamp])
+}
+
+model Institution {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  transcripts Transcript[]
+}
+
+model Student {
+  id          String       @id @default(cuid())
+  firstName   String
+  lastName    String
+  studentRef  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  transcripts Transcript[]
+
+  @@index([lastName, firstName])
+}
+
+model Transcript {
+  id                String            @id @default(cuid())
+  studentId         String
+  institutionId     String
+  fileName          String
+  fileUrl           String
+  parserStatus      ParserStatus      @default(PENDING)
+  rawText           String?
+  uploadedAt        DateTime          @default(now())
+  student           Student           @relation(fields: [studentId], references: [id])
+  institution       Institution       @relation(fields: [institutionId], references: [id])
+  files             TranscriptFile[]
+  externalCourses   ExternalCourse[]
+  mappingSuggestions MappingDecision[]
+  mappingPlan       MappingPlan?
+  reports           Report[]
+
+  @@index([uploadedAt])
+}
+
+model TranscriptFile {
+  id             String           @id @default(cuid())
+  transcriptId   String
+  fileName       String
+  fileUrl        String
+  parserStatus   ParserStatus     @default(PENDING)
+  rawText        String?
+  uploadedAt     DateTime         @default(now())
+  transcript     Transcript       @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  externalCourses ExternalCourse[]
+
+  @@index([transcriptId, uploadedAt])
+}
+
+enum ParserStatus {
+  PENDING
+  PARSED
+  NEEDS_REVIEW
+  FAILED
+}
+
+model ExternalCourse {
+  id                  String              @id @default(cuid())
+  transcriptId        String
+  transcriptFileId    String?
+  termLabel           String?
+  courseCode          String?
+  title               String
+  credits             Decimal?            @db.Decimal(4, 2)
+  grade               String?
+  sourceSnippet       String?
+  transcript          Transcript          @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  transcriptFile      TranscriptFile?     @relation(fields: [transcriptFileId], references: [id], onDelete: SetNull)
+  mappingSuggestions  MappingDecision[]
+  courseMappingDecision CourseMappingDecision?
+
+  @@index([courseCode, title])
+  @@index([transcriptFileId])
+}
+
+model Program {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  courses     ProgramCourse[]
+  mappingPlans MappingPlan[]
+}
+
+model ProgramCourse {
+  id                 String                 @id @default(cuid())
+  programId          String?
+  code               String
+  title              String
+  creditHours        Decimal?               @db.Decimal(4, 2)
+  program            Program?               @relation(fields: [programId], references: [id], onDelete: SetNull)
+  outcomes           ProgramOutcome[]
+  mappingSuggestions MappingDecision[]
+  courseSelections   CourseMappingSelection[]
+  journeySelections  MappingPlanJourneyCourse[]
+
+  @@index([title])
+  @@unique([programId, code])
+}
+
+model ProgramOutcome {
+  id              String        @id @default(cuid())
+  programCourseId String
+  outcomeCode     String?
+  description     String
+  programCourse   ProgramCourse @relation(fields: [programCourseId], references: [id], onDelete: Cascade)
+}
+
+model MappingDecision {
+  id                String          @id @default(cuid())
+  transcriptId      String
+  externalCourseId  String
+  programCourseId   String
+  status            MappingStatus   @default(SUGGESTED)
+  plcCreditsGranted Decimal?        @db.Decimal(4, 2)
+  rationale         String
+  confidence        Int?
+  reviewerId        String?
+  reviewedAt        DateTime?
+  transcript        Transcript      @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  externalCourse    ExternalCourse  @relation(fields: [externalCourseId], references: [id], onDelete: Cascade)
+  programCourse     ProgramCourse   @relation(fields: [programCourseId], references: [id], onDelete: Cascade)
+  reviewer          User?           @relation("ReviewerMappings", fields: [reviewerId], references: [id])
+  evidence          MappingEvidence[]
+
+  @@unique([externalCourseId, programCourseId])
+  @@index([status])
+}
+
+enum MappingStatus {
+  SUGGESTED
+  APPROVED
+  PARTIAL
+  REJECTED
+}
+
+model MappingEvidence {
+  id                String          @id @default(cuid())
+  mappingDecisionId String
+  kind              EvidenceKind
+  pageNumber        Int?
+  snippet           String
+  sourceRef         String?
+  mappingDecision   MappingDecision @relation(fields: [mappingDecisionId], references: [id], onDelete: Cascade)
+}
+
+enum EvidenceKind {
+  TRANSCRIPT_TEXT
+  CATALOG_OUTCOME
+  ADMIN_NOTE
+}
+
+model Report {
+  id            String       @id @default(cuid())
+  transcriptId  String
+  format        ReportFormat
+  fileUrl       String
+  generatedById String
+  generatedAt   DateTime     @default(now())
+  transcript    Transcript   @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  generatedBy   User         @relation("GeneratedReports", fields: [generatedById], references: [id])
+
+  @@index([generatedAt])
+}
+
+enum ReportFormat {
+  ADMIN
+  STUDENT
+}
+
+enum MappingPlanStatus {
+  DRAFT
+  APPROVED
+}
+
+model MappingPlan {
+  id                String                 @id @default(cuid())
+  transcriptId      String                 @unique
+  selectedProgramId String?
+  status            MappingPlanStatus      @default(DRAFT)
+  approvedById      String?
+  approvedAt        DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  transcript        Transcript             @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  selectedProgram   Program?               @relation(fields: [selectedProgramId], references: [id], onDelete: SetNull)
+  approvedBy        User?                  @relation("ApproverMappingPlans", fields: [approvedById], references: [id], onDelete: SetNull)
+  decisions         CourseMappingDecision[]
+  selections        CourseMappingSelection[]
+  journeyGroups     MappingPlanJourneyGroup[]
+  journeyCourses    MappingPlanJourneyCourse[]
+}
+
+model MappingPlanJourneyGroup {
+  id             String                    @id @default(cuid())
+  mappingPlanId  String
+  label          String
+  sortOrder      Int
+  updatedById    String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  mappingPlan    MappingPlan               @relation(fields: [mappingPlanId], references: [id], onDelete: Cascade)
+  updatedBy      User?                     @relation("JourneyGroupUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  journeyCourses MappingPlanJourneyCourse[]
+
+  @@index([mappingPlanId, sortOrder])
+}
+
+enum CourseDecisionStatus {
+  UNREVIEWED
+  MAPPED
+  NO_CREDIT
+  CREDIT_ONLY
+}
+
+model CourseMappingDecision {
+  id            String                 @id @default(cuid())
+  mappingPlanId String
+  externalCourseId String              @unique
+  status        CourseDecisionStatus   @default(UNREVIEWED)
+  awardedCredits Decimal?              @db.Decimal(4, 2)
+  rationale     String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  mappingPlan   MappingPlan            @relation(fields: [mappingPlanId], references: [id], onDelete: Cascade)
+  externalCourse ExternalCourse        @relation(fields: [externalCourseId], references: [id], onDelete: Cascade)
+  reviewedBy    User?                  @relation("ReviewerCourseDecisions", fields: [reviewedById], references: [id], onDelete: SetNull)
+  selections    CourseMappingSelection[]
+  evidence      CourseMappingEvidence[]
+
+  @@index([mappingPlanId, status])
+}
+
+model CourseMappingSelection {
+  id              String                 @id @default(cuid())
+  decisionId      String
+  mappingPlanId   String
+  programCourseId String
+  awardedCredits  Decimal?               @db.Decimal(4, 2)
+  createdAt       DateTime               @default(now())
+  decision        CourseMappingDecision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  mappingPlan     MappingPlan            @relation(fields: [mappingPlanId], references: [id], onDelete: Cascade)
+  programCourse   ProgramCourse          @relation(fields: [programCourseId], references: [id], onDelete: Cascade)
+
+  @@unique([decisionId, programCourseId])
+  @@unique([mappingPlanId, programCourseId])
+}
+
+model CourseMappingEvidence {
+  id            String                @id @default(cuid())
+  decisionId    String
+  kind          EvidenceKind
+  pageNumber    Int?
+  snippet       String
+  sourceRef     String?
+  decision      CourseMappingDecision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+}
+
+model MappingPlanJourneyCourse {
+  id              String       @id @default(cuid())
+  mappingPlanId   String
+  journeyGroupId  String?
+  programCourseId String
+  sortOrder       Int          @default(0)
+  termCode        String?      @db.VarChar(4)
+  updatedById     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  mappingPlan     MappingPlan  @relation(fields: [mappingPlanId], references: [id], onDelete: Cascade)
+  journeyGroup    MappingPlanJourneyGroup? @relation(fields: [journeyGroupId], references: [id], onDelete: SetNull)
+  programCourse   ProgramCourse @relation(fields: [programCourseId], references: [id], onDelete: Cascade)
+  updatedBy       User?        @relation("JourneyUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([mappingPlanId, programCourseId])
+  @@index([journeyGroupId, sortOrder])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
