@@ -65,6 +65,7 @@ Open `http://localhost:3000/sign-in` and sign in with `ADMIN_EMAIL` / `ADMIN_PAS
 - `npm run db:push` - push schema to DB without migration files.
 - `npm run user:create-admin -- --email "<email>" --name "<name>" --temp-password "<temp-password>"` - create/update an admin login.
 - `npm run user:reset-password -- --email "<email>" --temp-password "<temp-password>"` - rotate an admin password.
+- `npm run user:provision-admins -- -PrimaryEmail "<you@example.com>" -CoworkerEmail "<coworker@example.com>"` - provision two individual admin accounts together.
 - `npm run test` - run unit tests.
 - `npm run test:e2e` - run Playwright smoke tests.
 - `npm run lint` - run lint checks.

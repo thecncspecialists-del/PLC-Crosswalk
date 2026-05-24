@@ -85,6 +85,12 @@ Reset an admin password:
 npm run user:reset-password -- --email "<email>" --temp-password "<temp-password>"
 ```
 
+Provision two individual admins at once:
+
+```powershell
+npm run user:provision-admins -- -PrimaryEmail "<you@example.com>" -CoworkerEmail "<coworker@example.com>" -PrimaryName "<Your Name>" -CoworkerName "<Coworker Name>"
+```
+
 Policy:
 
 1. No shared admin account.

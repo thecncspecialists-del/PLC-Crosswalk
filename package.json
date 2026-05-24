@@ -17,6 +17,7 @@
     "import:demgy": "tsx scripts/import-demgy-transcripts.ts",
     "user:create-admin": "tsx scripts/create-admin-user.ts",
     "user:reset-password": "tsx scripts/reset-user-password.ts",
+    "user:provision-admins": "powershell -ExecutionPolicy Bypass -File scripts/provision-admins.ps1",
     "db:seed": "tsx prisma/seed.ts",
     "db:backfill:transcript-files": "tsx scripts/backfill-transcript-files.ts",
     "test": "vitest run",
