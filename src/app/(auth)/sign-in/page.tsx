@@ -58,15 +58,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <h1 className="text-lg font-semibold text-slate-900">The Machinists Institute</h1>
         <p className="mt-1 text-sm text-slate-600">PLC Crosswalk Admin Login</p>
         <p className="mt-1 text-xs text-slate-500">
-          Admin accounts are provisioned by your system admin. If you were issued a temporary password, sign in and
-          rotate it immediately.
+          Use your assigned admin account. If you were issued a temporary password, sign in and rotate it immediately.
         </p>
         <form action={signInAction} className="mt-6 grid gap-3">
           <input
             required
             type="email"
             name="email"
-            placeholder="admin@machinists.institute"
+            placeholder="you@your-organization.com"
             defaultValue={isDev ? devEmail : undefined}
             className="rounded border border-slate-300 px-3 py-2 text-sm"
           />
@@ -74,7 +73,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             required
             type="password"
             name="password"
-            placeholder="Password"
+            placeholder="Enter your password"
             defaultValue={isDev ? devPassword : undefined}
             className="rounded border border-slate-300 px-3 py-2 text-sm"
           />
