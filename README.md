@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # The Machinists Institute - PLC Crosswalk
 
 Admin-only web application for transcript ingestion, prior-learning-credit mapping, evidence tracking, and admin/student report export.
@@ -90,3 +91,7 @@ Open `http://localhost:3000/sign-in` and sign in with `ADMIN_EMAIL` / `ADMIN_PAS
 6. Bootstrap coworker/admin accounts with `npm run user:create-admin`.
 
 See [PRODUCTION_RUNBOOK.md](./PRODUCTION_RUNBOOK.md) for the full operational checklist.
+=======
+# PLC-Crosswalk
+PLC Crosswalk is built to turn transcript review into a faster, cleaner decision workflow.
+>>>>>>> 8ee9e963f0e4ec8849e63baff45719f9e6d746e4
