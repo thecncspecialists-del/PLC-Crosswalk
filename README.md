@@ -10,6 +10,7 @@ Admin-only web application for transcript ingestion, prior-learning-credit mappi
 - Day-to-day hosted usage guide: `docs/DAILY_USE_REMOTE.md`
 - GitHub/Vercel setup guide: `docs/GITHUB_VERCEL_SETUP.md`
 - Local fallback install guide: `COWORKER_INSTALL_GUIDE.md`
+- One-click local launcher: `Start-PLC-Crosswalk.bat`
 
 ## Stack
 

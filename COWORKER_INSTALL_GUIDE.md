@@ -209,6 +209,11 @@ http://localhost:3000/sign-in
 
 Sign in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`.
 
+No-terminal fallback:
+
+1. Double-click `Start-PLC-Crosswalk.bat` in the project root.
+2. Wait for the browser to open `http://localhost:3000/sign-in`.
+
 ## 9. Production-Like Local Start
 
 For a more stable local run that uses a built app instead of the dev server:

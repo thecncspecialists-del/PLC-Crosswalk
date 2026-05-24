@@ -24,6 +24,12 @@ In GitHub repository settings for `main`:
 3. Block direct pushes to `main`.
 4. Require at least one approval when available.
 
+Optional automated setup (requires a GitHub token with repo admin permissions):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\set-branch-protection.ps1 -Owner "thecncspecialists-del" -Repo "PLC-Crosswalk" -Token "<github-token>"
+```
+
 ## 3) Connect Vercel to GitHub repository
 
 1. Create/import project in Vercel from `thecncspecialists-del/PLC-Crosswalk`.
