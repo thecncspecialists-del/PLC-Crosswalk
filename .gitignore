@@ -49,3 +49,5 @@ next-env.d.ts
 # local runtime data
 /uploads/
 /test-results/
+
+.vercel
