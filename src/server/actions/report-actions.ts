@@ -89,26 +89,48 @@ export async function generateReportAction(formData: FormData) {
 
   const format = parsed.data.format as ReportFormat;
   const generatedAt = new Date();
-  const reportPdf = await buildReportPdfBuffer(transcript, format, generatedAt);
-  const reportPath = await saveUploadFile(
-    "reports",
-    `${transcript.id}-${format.toLowerCase()}.pdf`,
-    reportPdf,
-    { contentType: "application/pdf" },
-  );
+  let report: { id: string };
+  try {
+    const reportPdf = await buildReportPdfBuffer(transcript, format, generatedAt);
+    const reportPath = await saveUploadFile(
+      "reports",
+      `${transcript.id}-${format.toLowerCase()}.pdf`,
+      reportPdf,
+      { contentType: "application/pdf" },
+    );
 
-  const report = await db.report.create({
-    data: {
-      transcriptId: transcript.id,
-      format,
-      fileUrl: reportPath,
-      generatedById: adminUser.id,
-      generatedAt,
-    },
-    select: {
-      id: true,
-    },
-  });
+    report = await db.report.create({
+      data: {
+        transcriptId: transcript.id,
+        format,
+        fileUrl: reportPath,
+        generatedById: adminUser.id,
+        generatedAt,
+      },
+      select: {
+        id: true,
+      },
+    });
+  } catch (error) {
+    await recordActionHistory({
+      actor: adminUser,
+      actionType: "report_generate",
+      description: `Failed to generate a ${format.toLowerCase()} PDF report.`,
+      area: "reports",
+      affectedType: "transcript",
+      affectedId: transcript.id,
+      status: ActionHistoryStatus.ERROR,
+      metadata: {
+        transcriptId: transcript.id,
+        format,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      },
+    });
+    revalidatePath("/reports");
+    revalidatePath(`/transcripts/${transcript.id}`);
+    return;
+  }
 
   await recordActionHistory({
     actor: adminUser,
