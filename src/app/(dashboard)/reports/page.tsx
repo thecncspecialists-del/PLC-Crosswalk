@@ -134,7 +134,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                   <td className="px-3 py-2">{report.transcript.institution.name}</td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <DownloadReportButton reportId={report.id} />
+                      <DownloadReportButton reportId={report.id} format={report.format} />
                       <DeleteReportButton reportId={report.id} />
                     </div>
                   </td>

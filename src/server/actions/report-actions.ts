@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { recordActionHistory } from "@/lib/action-history";
 import { db } from "@/lib/db";
 import { requireAdminUser } from "@/lib/permissions";
-import { buildReportContent } from "@/lib/report-builder";
+import { buildReportPdfBuffer } from "@/lib/report-builder";
 import { saveUploadFile } from "@/lib/storage";
 import { generateReportSchema } from "@/lib/validation";
 
@@ -28,16 +28,42 @@ export async function generateReportAction(formData: FormData) {
       institution: true,
       mappingPlan: {
         include: {
-          selectedProgram: true,
+          selectedProgram: {
+            include: {
+              courses: {
+                include: {
+                  outcomes: true,
+                },
+                orderBy: { code: "asc" },
+              },
+            },
+          },
+          journeyCourses: {
+            include: {
+              programCourse: true,
+            },
+          },
           decisions: {
+            orderBy: { createdAt: "asc" },
             include: {
               externalCourse: true,
               selections: {
+                orderBy: { createdAt: "asc" },
                 include: {
-                  programCourse: true,
+                  programCourse: {
+                    include: {
+                      outcomes: true,
+                    },
+                  },
                 },
               },
               evidence: true,
+              reviewedBy: {
+                select: {
+                  email: true,
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -62,12 +88,13 @@ export async function generateReportAction(formData: FormData) {
   }
 
   const format = parsed.data.format as ReportFormat;
-  const reportText = buildReportContent(transcript, format);
-  const extension = format === ReportFormat.ADMIN ? "txt" : "txt";
+  const generatedAt = new Date();
+  const reportPdf = await buildReportPdfBuffer(transcript, format, generatedAt);
   const reportPath = await saveUploadFile(
     "reports",
-    `${transcript.id}-${format.toLowerCase()}.${extension}`,
-    Buffer.from(reportText, "utf-8"),
+    `${transcript.id}-${format.toLowerCase()}.pdf`,
+    reportPdf,
+    { contentType: "application/pdf" },
   );
 
   const report = await db.report.create({
@@ -76,6 +103,7 @@ export async function generateReportAction(formData: FormData) {
       format,
       fileUrl: reportPath,
       generatedById: adminUser.id,
+      generatedAt,
     },
     select: {
       id: true,

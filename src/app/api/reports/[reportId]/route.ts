@@ -5,6 +5,7 @@ import { recordActionHistory } from "@/lib/action-history";
 import { appLogger } from "@/lib/app-logger";
 import { db } from "@/lib/db";
 import { getAdminSessionUser } from "@/lib/permissions";
+import { getReportDownloadMetadata } from "@/lib/report-download";
 import { deleteStoredFile, readStoredFile } from "@/lib/storage";
 
 type Params = {
@@ -56,7 +57,7 @@ export async function GET(_request: Request, context: Params) {
     return NextResponse.json({ error: "Report file not found in storage." }, { status: 404 });
   }
 
-  const fileName = `${report.format.toLowerCase()}-${report.id}.txt`;
+  const downloadMetadata = getReportDownloadMetadata(report, fileBuffer);
   await recordActionHistory({
     actor: adminUser,
     actionType: "report_download",
@@ -73,8 +74,8 @@ export async function GET(_request: Request, context: Params) {
 
   return new NextResponse(new Uint8Array(fileBuffer), {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Content-Type": downloadMetadata.contentType,
+      "Content-Disposition": `attachment; filename="${downloadMetadata.fileName}"`,
     },
   });
 }

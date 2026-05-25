@@ -4,19 +4,20 @@ import { useState } from "react";
 
 type DownloadReportButtonProps = {
   reportId: string;
+  format?: "ADMIN" | "STUDENT";
   className?: string;
 };
 
-function parseFileName(contentDispositionHeader: string | null, reportId: string) {
+function parseFileName(contentDispositionHeader: string | null, reportId: string, format?: "ADMIN" | "STUDENT") {
   if (!contentDispositionHeader) {
-    return `report-${reportId}.txt`;
+    return `${format?.toLowerCase() ?? "report"}-${reportId}.pdf`;
   }
 
   const fileNameMatch = contentDispositionHeader.match(/filename="([^"]+)"/i);
-  return fileNameMatch?.[1] ?? `report-${reportId}.txt`;
+  return fileNameMatch?.[1] ?? `${format?.toLowerCase() ?? "report"}-${reportId}.pdf`;
 }
 
-export function DownloadReportButton({ reportId, className }: DownloadReportButtonProps) {
+export function DownloadReportButton({ reportId, format, className }: DownloadReportButtonProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +36,7 @@ export function DownloadReportButton({ reportId, className }: DownloadReportButt
       }
 
       const blob = await response.blob();
-      const fileName = parseFileName(response.headers.get("content-disposition"), reportId);
+      const fileName = parseFileName(response.headers.get("content-disposition"), reportId, format);
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;

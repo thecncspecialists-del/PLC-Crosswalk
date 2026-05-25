@@ -7,6 +7,9 @@ import { appLogger } from "@/lib/app-logger";
 
 type StorageFolder = "transcripts" | "reports";
 type StorageProvider = "inline" | "local" | "s3";
+type SaveUploadFileOptions = {
+  contentType?: string;
+};
 
 const uploadsRoot = path.join(process.cwd(), "uploads");
 const storageProvider = ((process.env.STORAGE_PROVIDER ?? "local").toLowerCase() as StorageProvider) || "local";
@@ -29,7 +32,11 @@ function buildStoredPath(folder: StorageFolder, fileName: string) {
   return `${folder}/${timestamp}-${safeName(fileName)}`;
 }
 
-function contentTypeForFolder(folder: StorageFolder) {
+export function resolveStorageContentType(folder: StorageFolder, contentType?: string) {
+  const normalized = contentType?.trim();
+  if (normalized) {
+    return normalized;
+  }
   return folder === "transcripts" ? "application/pdf" : "text/plain; charset=utf-8";
 }
 
@@ -41,8 +48,8 @@ function isInlineReference(reference: string) {
   return reference.startsWith("data:");
 }
 
-function buildInlineReference(folder: StorageFolder, buffer: Buffer) {
-  return `data:${contentTypeForFolder(folder)};base64,${buffer.toString("base64")}`;
+function buildInlineReference(folder: StorageFolder, buffer: Buffer, contentType?: string) {
+  return `data:${resolveStorageContentType(folder, contentType)};base64,${buffer.toString("base64")}`;
 }
 
 function readInlineReference(reference: string) {
@@ -151,11 +158,17 @@ export async function ensureStorageFolders() {
   await mkdir(path.join(uploadsRoot, "reports"), { recursive: true });
 }
 
-export async function saveUploadFile(folder: StorageFolder, fileName: string, buffer: Buffer) {
+export async function saveUploadFile(
+  folder: StorageFolder,
+  fileName: string,
+  buffer: Buffer,
+  options: SaveUploadFileOptions = {},
+) {
   const storedPath = buildStoredPath(folder, fileName);
+  const contentType = resolveStorageContentType(folder, options.contentType);
 
   if (storageProvider === "inline") {
-    return buildInlineReference(folder, buffer);
+    return buildInlineReference(folder, buffer, contentType);
   }
 
   if (storageProvider === "s3") {
@@ -166,7 +179,7 @@ export async function saveUploadFile(folder: StorageFolder, fileName: string, bu
           Bucket: s3Bucket,
           Key: storedPath,
           Body: buffer,
-          ContentType: contentTypeForFolder(folder),
+          ContentType: contentType,
         }),
       );
       return `s3://${s3Bucket}/${storedPath}`;
@@ -183,7 +196,7 @@ export async function saveUploadFile(folder: StorageFolder, fileName: string, bu
           errorMessage: error instanceof Error ? error.message : String(error),
         },
       });
-      return buildInlineReference(folder, buffer);
+      return buildInlineReference(folder, buffer, contentType);
     }
   }
 

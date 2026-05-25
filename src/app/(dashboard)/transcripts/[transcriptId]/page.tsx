@@ -775,6 +775,7 @@ export default async function TranscriptDetailPage({ params, searchParams }: Tra
               <div className="flex items-center gap-2">
                 <DownloadReportButton
                   reportId={report.id}
+                  format={report.format}
                   className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 disabled:opacity-50"
                 />
                 <DeleteReportButton reportId={report.id} />
