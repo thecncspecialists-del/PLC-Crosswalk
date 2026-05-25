@@ -148,7 +148,9 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
                 ))
               )}
             </select>
-            <p className="text-xs text-slate-600">Existing record upload appends to the selected record.</p>
+            <p className="text-xs text-slate-600">
+              Existing record upload repairs the stored PDF preview and keeps extracted courses unchanged.
+            </p>
             {needsExistingRecord ? (
               <p id={submitHelpId} className="text-xs font-medium text-amber-700">
                 Select an existing student record before updating.
@@ -228,7 +230,7 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
         className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         title={needsExistingRecord ? "Select an existing student record before updating." : undefined}
       >
-        {isExistingMode ? "Update" : "Upload"}
+        {isExistingMode ? "Repair PDF" : "Upload"}
       </SubmitButton>
     </form>
   );

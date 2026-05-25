@@ -48,7 +48,7 @@ test("upload form shows validation states before creating records", async ({ pag
   if (await existingButton.isEnabled()) {
     await existingButton.click();
     await expect(page.getByText("Select an existing student record before updating.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Update" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Repair PDF" })).toBeDisabled();
   }
 
   await page.getByRole("button", { name: "New Record" }).click();

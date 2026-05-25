@@ -1,4 +1,4 @@
-import { CourseDecisionStatus, EvidenceKind, MappingPlanStatus } from "@prisma/client";
+import { CourseDecisionStatus, EvidenceKind, MappingPlanStatus, ParserStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { buildMappingSuggestions } from "@/lib/matcher";
@@ -13,6 +13,14 @@ export type TranscriptUploadResult = {
   parserStatus: string;
   extractedCourses: number;
   suggestions: number;
+};
+
+export type ExistingTranscriptFileRepairResult = {
+  transcriptId: string;
+  transcriptFileId: string;
+  fileUrl: string;
+  parserStatus: ParserStatus;
+  preservedCourses: number;
 };
 
 export type TranscriptUploadNotice =
@@ -288,4 +296,82 @@ export async function createTranscriptFromUpload(args: {
     extractedCourses: uploadRecord.createdCourses.length,
     suggestions: suggestionsCount,
   } satisfies TranscriptUploadResult;
+}
+
+export async function repairExistingTranscriptSourceFile(args: {
+  file: File;
+  transcriptId: string;
+}) {
+  const { file, transcriptId } = args;
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  const fileUrl = await saveUploadFile("transcripts", file.name, fileBuffer);
+
+  return db.$transaction(async (tx) => {
+    const transcript = await tx.transcript.findUnique({
+      where: { id: transcriptId },
+      include: {
+        files: {
+          orderBy: [{ uploadedAt: "desc" }, { id: "desc" }],
+          take: 1,
+          select: {
+            id: true,
+            parserStatus: true,
+            rawText: true,
+          },
+        },
+        externalCourses: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!transcript) {
+      throw new Error("Unable to resolve transcript for source PDF repair.");
+    }
+
+    await tx.transcript.update({
+      where: { id: transcript.id },
+      data: {
+        fileName: file.name,
+        fileUrl,
+      },
+    });
+
+    const existingFile = transcript.files[0] ?? null;
+    const transcriptFile = existingFile
+      ? await tx.transcriptFile.update({
+          where: { id: existingFile.id },
+          data: {
+            fileName: file.name,
+            fileUrl,
+          },
+          select: {
+            id: true,
+            parserStatus: true,
+          },
+        })
+      : await tx.transcriptFile.create({
+          data: {
+            transcriptId: transcript.id,
+            fileName: file.name,
+            fileUrl,
+            parserStatus: transcript.parserStatus,
+            rawText: transcript.rawText,
+          },
+          select: {
+            id: true,
+            parserStatus: true,
+          },
+        });
+
+    return {
+      transcriptId: transcript.id,
+      transcriptFileId: transcriptFile.id,
+      fileUrl,
+      parserStatus: transcriptFile.parserStatus,
+      preservedCourses: transcript.externalCourses.length,
+    } satisfies ExistingTranscriptFileRepairResult;
+  });
 }

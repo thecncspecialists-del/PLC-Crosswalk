@@ -13,7 +13,11 @@ import { formatGrade } from "@/lib/grade-format";
 import { buildMappingSuggestions } from "@/lib/matcher";
 import { requireAdminUser } from "@/lib/permissions";
 import { deleteStoredFile } from "@/lib/storage";
-import { createTranscriptFromUpload, validateTranscriptUploadFile } from "@/lib/transcript-upload";
+import {
+  createTranscriptFromUpload,
+  repairExistingTranscriptSourceFile,
+  validateTranscriptUploadFile,
+} from "@/lib/transcript-upload";
 import {
   createExternalCourseSchema,
   deleteExternalCourseSchema,
@@ -118,6 +122,52 @@ export async function uploadTranscriptAction(formData: FormData) {
     redirect("/transcripts?notice=upload_invalid_metadata");
   }
 
+  if (parsedMetadata.data.uploadMode === "existing") {
+    let repairResult: Awaited<ReturnType<typeof repairExistingTranscriptSourceFile>>;
+    try {
+      repairResult = await repairExistingTranscriptSourceFile({
+        file: uploadFile,
+        transcriptId: parsedMetadata.data.existingTranscriptId,
+      });
+    } catch (error) {
+      await recordActionHistory({
+        actor: adminUser,
+        actionType: "transcript_upload",
+        description: "Transcript source PDF repair failed before the existing record could be updated.",
+        area: "transcripts",
+        affectedType: "transcript",
+        affectedId: parsedMetadata.data.existingTranscriptId,
+        status: ActionHistoryStatus.ERROR,
+        metadata: {
+          fileName: uploadFile.name,
+          uploadMode: parsedMetadata.data.uploadMode,
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      });
+      redirect("/transcripts?notice=upload_failed");
+    }
+
+    await recordActionHistory({
+      actor: adminUser,
+      actionType: "transcript_upload",
+      description: "Repaired the source PDF for an existing transcript record without changing extracted courses.",
+      area: "transcripts",
+      affectedType: "transcript",
+      affectedId: repairResult.transcriptId,
+      status: ActionHistoryStatus.SUCCESS,
+      metadata: {
+        fileName: uploadFile.name,
+        uploadMode: parsedMetadata.data.uploadMode,
+        transcriptFileId: repairResult.transcriptFileId,
+        parserStatus: repairResult.parserStatus,
+        preservedCourses: repairResult.preservedCourses,
+      },
+    });
+
+    redirect(`/transcripts/${repairResult.transcriptId}?workspace=preview`);
+  }
+
   let uploadResult: Awaited<ReturnType<typeof createTranscriptFromUpload>>;
   try {
     uploadResult = await createTranscriptFromUpload({
@@ -136,6 +186,7 @@ export async function uploadTranscriptAction(formData: FormData) {
         fileName: uploadFile.name,
         uploadMode: parsedMetadata.data.uploadMode,
         errorName: error instanceof Error ? error.name : "UnknownError",
+        errorMessage: error instanceof Error ? error.message : String(error),
       },
     });
     redirect("/transcripts?notice=upload_failed");
@@ -144,10 +195,7 @@ export async function uploadTranscriptAction(formData: FormData) {
   await recordActionHistory({
     actor: adminUser,
     actionType: "transcript_upload",
-    description:
-      parsedMetadata.data.uploadMode === "existing"
-        ? "Appended a transcript file to an existing transcript record."
-        : "Uploaded and parsed a new transcript.",
+    description: "Uploaded and parsed a new transcript.",
     area: "transcripts",
     affectedType: "transcript",
     affectedId: uploadResult.transcriptId,
