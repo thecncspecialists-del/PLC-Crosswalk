@@ -130,6 +130,10 @@ type DetailColumn = {
 
 const PAGE_MARGIN = 36;
 const PAGE_BOTTOM_MARGIN = 42;
+const MAIN_ROW_MIN_HEIGHT = 32;
+const MAIN_ROW_MAX_HEIGHT = 78;
+const DETAIL_ROW_MIN_HEIGHT = 30;
+const DETAIL_ROW_MAX_HEIGHT = 72;
 const STUDENT_EVIDENCE_LIMIT = 170;
 const ADMIN_EVIDENCE_LIMIT = 420;
 const MAIN_TABLE_COLUMNS: TableColumn[] = [
@@ -500,6 +504,10 @@ function cellTextHeight(doc: PDFKit.PDFDocument, text: string, width: number, fo
   return doc.heightOfString(text || " ", { width: width - 10, lineGap: 1 }) + 10;
 }
 
+function boundedRowHeight(measuredHeight: number, minHeight: number, maxHeight: number) {
+  return Math.min(maxHeight, Math.max(minHeight, measuredHeight));
+}
+
 function drawTableHeader(
   doc: PDFKit.PDFDocument,
   columns: Array<{ label: string; width: number }>,
@@ -533,7 +541,11 @@ function statusFill(status: ReportStatusLabel) {
 
 function drawMainRow(doc: PDFKit.PDFDocument, row: ReportTableRow, rowIndex: number) {
   const values = MAIN_TABLE_COLUMNS.map((column) => String(row[column.key] ?? ""));
-  const rowHeight = Math.max(32, ...MAIN_TABLE_COLUMNS.map((column, index) => cellTextHeight(doc, values[index]!, column.width)));
+  const measuredHeight = Math.max(
+    MAIN_ROW_MIN_HEIGHT,
+    ...MAIN_TABLE_COLUMNS.map((column, index) => cellTextHeight(doc, values[index]!, column.width)),
+  );
+  const rowHeight = boundedRowHeight(measuredHeight, MAIN_ROW_MIN_HEIGHT, MAIN_ROW_MAX_HEIGHT);
   addPageIfNeeded(doc, rowHeight, () => drawTableHeader(doc, MAIN_TABLE_COLUMNS));
 
   const y = doc.y;
@@ -560,7 +572,11 @@ function drawMainRow(doc: PDFKit.PDFDocument, row: ReportTableRow, rowIndex: num
 
 function drawDetailRow(doc: PDFKit.PDFDocument, row: ReportTableRow, rowIndex: number) {
   const values = ADMIN_DETAIL_COLUMNS.map((column) => String(row.adminDetail[column.key] ?? ""));
-  const rowHeight = Math.max(30, ...ADMIN_DETAIL_COLUMNS.map((column, index) => cellTextHeight(doc, values[index]!, column.width)));
+  const measuredHeight = Math.max(
+    DETAIL_ROW_MIN_HEIGHT,
+    ...ADMIN_DETAIL_COLUMNS.map((column, index) => cellTextHeight(doc, values[index]!, column.width)),
+  );
+  const rowHeight = boundedRowHeight(measuredHeight, DETAIL_ROW_MIN_HEIGHT, DETAIL_ROW_MAX_HEIGHT);
   addPageIfNeeded(doc, rowHeight, () => drawTableHeader(doc, ADMIN_DETAIL_COLUMNS));
 
   const y = doc.y;
@@ -613,8 +629,8 @@ function drawFooter(doc: PDFKit.PDFDocument) {
       .text(
         `The Machinists Institute PLC Crosswalk | Page ${pageNumber} of ${range.count}`,
         PAGE_MARGIN,
-        doc.page.height - 27,
-        { align: "center", width: doc.page.width - PAGE_MARGIN * 2 },
+        doc.page.height - 48,
+        { align: "center", lineBreak: false, width: doc.page.width - PAGE_MARGIN * 2 },
       );
   }
 }

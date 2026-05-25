@@ -7,6 +7,7 @@ import { recordActionHistory } from "@/lib/action-history";
 import { db } from "@/lib/db";
 import { requireAdminUser } from "@/lib/permissions";
 import { buildReportPdfBuffer } from "@/lib/report-builder";
+import { buildReportDownloadFileName } from "@/lib/report-download";
 import { saveUploadFile } from "@/lib/storage";
 import { generateReportSchema } from "@/lib/validation";
 
@@ -94,7 +95,18 @@ export async function generateReportAction(formData: FormData) {
     const reportPdf = await buildReportPdfBuffer(transcript, format, generatedAt);
     const reportPath = await saveUploadFile(
       "reports",
-      `${transcript.id}-${format.toLowerCase()}.pdf`,
+      buildReportDownloadFileName(
+        {
+          id: transcript.id,
+          format,
+          fileUrl: "",
+          generatedAt,
+          transcript: {
+            student: transcript.student,
+          },
+        },
+        "pdf",
+      ),
       reportPdf,
       { contentType: "application/pdf" },
     );

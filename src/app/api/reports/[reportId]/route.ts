@@ -23,6 +23,18 @@ export async function GET(_request: Request, context: Params) {
   const { reportId } = await context.params;
   const report = await db.report.findUnique({
     where: { id: reportId },
+    include: {
+      transcript: {
+        select: {
+          student: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!report) {
@@ -75,7 +87,7 @@ export async function GET(_request: Request, context: Params) {
   return new NextResponse(new Uint8Array(fileBuffer), {
     headers: {
       "Content-Type": downloadMetadata.contentType,
-      "Content-Disposition": `attachment; filename="${downloadMetadata.fileName}"`,
+      "Content-Disposition": `attachment; filename="${downloadMetadata.fileName.replace(/["\r\n]/g, "_")}"`,
     },
   });
 }

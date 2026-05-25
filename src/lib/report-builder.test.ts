@@ -7,6 +7,11 @@ import {
   type TranscriptForReport,
 } from "@/lib/report-builder";
 
+function countPdfPages(pdfBuffer: Buffer) {
+  const matches = pdfBuffer.toString("latin1").match(/\/Type\s*\/Page\b/g);
+  return matches?.length ?? 0;
+}
+
 function transcriptFixture(): TranscriptForReport {
   return {
     id: "transcript-1",
@@ -205,5 +210,12 @@ describe("renderReportPdfBuffer", () => {
     const pdfBuffer = await renderReportPdfBuffer(model);
 
     expect(pdfBuffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+  });
+
+  it("does not append footer-only blank pages", async () => {
+    const model = buildReportViewModel(transcriptFixture(), ReportFormat.ADMIN);
+    const pdfBuffer = await renderReportPdfBuffer(model);
+
+    expect(countPdfPages(pdfBuffer)).toBeLessThanOrEqual(2);
   });
 });
