@@ -113,6 +113,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   });
   const shouldCanonicalizeSettingsUrl =
     normalizedPortalQuery.issues.length > 0 || dbPortal.portal.page !== normalizedPortalQuery.page;
+  const isTranscriptsTable = dbPortal.portal.table === "transcripts";
+  const tableViewportClass = isTranscriptsTable ? "mt-3 max-h-[21rem] overflow-auto" : "mt-3 overflow-x-auto";
+  const stickyHeaderClass = isTranscriptsTable ? "sticky top-0 z-10 bg-slate-50" : "";
 
   return (
     <section className="grid min-w-0 gap-4">
@@ -221,16 +224,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </div>
           </div>
 
-          <div className="mt-3 overflow-x-auto">
+          <div className={tableViewportClass}>
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   {dbPortal.portal.columns.map((column) => (
-                    <th key={column.key} className="px-3 py-2">
+                    <th key={column.key} className={`px-3 py-2 ${stickyHeaderClass}`}>
                       {column.label}
                     </th>
                   ))}
-                  <th className="px-3 py-2">Details</th>
+                  <th className={`px-3 py-2 ${stickyHeaderClass}`}>Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
