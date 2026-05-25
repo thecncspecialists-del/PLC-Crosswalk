@@ -3,8 +3,10 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 
+import { appLogger } from "@/lib/app-logger";
+
 type StorageFolder = "transcripts" | "reports";
-type StorageProvider = "local" | "s3";
+type StorageProvider = "inline" | "local" | "s3";
 
 const uploadsRoot = path.join(process.cwd(), "uploads");
 const storageProvider = ((process.env.STORAGE_PROVIDER ?? "local").toLowerCase() as StorageProvider) || "local";
@@ -27,8 +29,29 @@ function buildStoredPath(folder: StorageFolder, fileName: string) {
   return `${folder}/${timestamp}-${safeName(fileName)}`;
 }
 
+function contentTypeForFolder(folder: StorageFolder) {
+  return folder === "transcripts" ? "application/pdf" : "text/plain; charset=utf-8";
+}
+
 function isS3Reference(reference: string) {
   return reference.startsWith("s3://");
+}
+
+function isInlineReference(reference: string) {
+  return reference.startsWith("data:");
+}
+
+function buildInlineReference(folder: StorageFolder, buffer: Buffer) {
+  return `data:${contentTypeForFolder(folder)};base64,${buffer.toString("base64")}`;
+}
+
+function readInlineReference(reference: string) {
+  const marker = ";base64,";
+  const markerIndex = reference.indexOf(marker);
+  if (!isInlineReference(reference) || markerIndex < 0) {
+    throw new Error("Invalid inline storage reference.");
+  }
+  return Buffer.from(reference.slice(markerIndex + marker.length), "base64");
 }
 
 function parseS3Reference(reference: string) {
@@ -131,17 +154,37 @@ export async function ensureStorageFolders() {
 export async function saveUploadFile(folder: StorageFolder, fileName: string, buffer: Buffer) {
   const storedPath = buildStoredPath(folder, fileName);
 
+  if (storageProvider === "inline") {
+    return buildInlineReference(folder, buffer);
+  }
+
   if (storageProvider === "s3") {
     const s3 = getS3Client();
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: s3Bucket,
-        Key: storedPath,
-        Body: buffer,
-        ContentType: folder === "transcripts" ? "application/pdf" : "text/plain; charset=utf-8",
-      }),
-    );
-    return `s3://${s3Bucket}/${storedPath}`;
+    try {
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: s3Bucket,
+          Key: storedPath,
+          Body: buffer,
+          ContentType: contentTypeForFolder(folder),
+        }),
+      );
+      return `s3://${s3Bucket}/${storedPath}`;
+    } catch (error) {
+      appLogger.warn({
+        action: "storage_inline_fallback",
+        area: "storage",
+        status: "warning",
+        message: "S3 upload failed; storing file inline so the production workflow can continue.",
+        metadata: {
+          folder,
+          fileName,
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      });
+      return buildInlineReference(folder, buffer);
+    }
   }
 
   await ensureStorageFolders();
@@ -158,6 +201,10 @@ export function getAbsoluteStoragePath(reference: string) {
 }
 
 export async function readStoredFile(reference: string) {
+  if (isInlineReference(reference)) {
+    return readInlineReference(reference);
+  }
+
   if (isS3Reference(reference) || storageProvider === "s3") {
     const { bucket, key } = parseS3Reference(reference);
     const s3 = getS3Client();
@@ -180,6 +227,10 @@ export async function readStoredFile(reference: string) {
 }
 
 export async function deleteStoredFile(reference: string) {
+  if (isInlineReference(reference)) {
+    return;
+  }
+
   if (isS3Reference(reference) || storageProvider === "s3") {
     const { bucket, key } = parseS3Reference(reference);
     const s3 = getS3Client();

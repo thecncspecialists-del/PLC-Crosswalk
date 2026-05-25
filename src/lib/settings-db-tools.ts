@@ -192,6 +192,21 @@ export function truncateForPortal(value: unknown, maxLength = CELL_MAX_LENGTH): 
 }
 
 function detail(label: string, value: unknown) {
+  if (label === "fileUrl" && typeof value === "string" && value.startsWith("data:")) {
+    const marker = ";base64,";
+    const markerIndex = value.indexOf(marker);
+    const contentType = markerIndex > 5 ? value.slice("data:".length, markerIndex) : "inline file";
+    const estimatedBytes =
+      markerIndex >= 0 ? Math.floor((value.length - markerIndex - marker.length) * 0.75) : null;
+    return {
+      label,
+      value:
+        estimatedBytes == null
+          ? `[${contentType} stored inline]`
+          : `[${contentType} stored inline, ${estimatedBytes} bytes]`,
+    };
+  }
+
   return {
     label,
     value: truncateForPortal(value, HIDDEN_MAX_LENGTH),
