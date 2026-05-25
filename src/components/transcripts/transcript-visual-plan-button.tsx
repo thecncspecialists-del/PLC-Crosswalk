@@ -42,6 +42,10 @@ type JourneyGroupView = {
 
 const DEFAULT_COURSE_SCROLL_STEP = 140;
 const VISUAL_PLAN_NODE_SELECTOR = "[data-visual-plan-node='true']";
+const AWARDED_CONNECTOR_STROKE = "rgb(16 185 129)";
+const AWARDED_CONNECTOR_OPACITY = 0.64;
+const JOURNEY_CONNECTOR_STROKE = "rgb(79 70 229)";
+const JOURNEY_CONNECTOR_OPACITY = 0.56;
 
 function externalNodeClasses(status: VisualPlanDecisionStatus) {
   if (status === "MAPPED") {
@@ -370,8 +374,8 @@ export function TranscriptVisualPlanButton({
         {
           id: edge.id,
           d,
-          stroke: "rgb(16 185 129)",
-          strokeOpacity: 0.64,
+          stroke: AWARDED_CONNECTOR_STROKE,
+          strokeOpacity: AWARDED_CONNECTOR_OPACITY,
           strokeWidth: 2,
         },
       ];
@@ -388,7 +392,11 @@ export function TranscriptVisualPlanButton({
         return [];
       }
 
-      const buildPath = (targetNode: HTMLElement, suffix: string) => {
+      const buildPath = (
+        targetNode: HTMLElement,
+        suffix: string,
+        style: Pick<ConnectorPath, "stroke" | "strokeOpacity">,
+      ) => {
         const targetRect = targetNode.getBoundingClientRect();
         if (!isVisibleInScroller(targetRect, journeyScrollerRect)) {
           return null;
@@ -403,8 +411,8 @@ export function TranscriptVisualPlanButton({
         return {
           id: `journey:${node.id}:${suffix}`,
           d,
-          stroke: "rgb(79 70 229)",
-          strokeOpacity: 0.56,
+          stroke: style.stroke,
+          strokeOpacity: style.strokeOpacity,
           strokeWidth: 2,
         };
       };
@@ -412,7 +420,10 @@ export function TranscriptVisualPlanButton({
       const paths: ConnectorPath[] = [];
       const awardedTarget = awardedNodeRefs.current.get(node.id);
       if (awardedTarget) {
-        const path = buildPath(awardedTarget, "awarded");
+        const path = buildPath(awardedTarget, "awarded", {
+          stroke: AWARDED_CONNECTOR_STROKE,
+          strokeOpacity: AWARDED_CONNECTOR_OPACITY,
+        });
         if (path) {
           paths.push(path);
         }
@@ -420,7 +431,10 @@ export function TranscriptVisualPlanButton({
 
       const journeyTarget = journeyNodeRefs.current.get(node.id);
       if (journeyTarget) {
-        const path = buildPath(journeyTarget, "journey");
+        const path = buildPath(journeyTarget, "journey", {
+          stroke: node.isAwardedMapped ? AWARDED_CONNECTOR_STROKE : JOURNEY_CONNECTOR_STROKE,
+          strokeOpacity: node.isAwardedMapped ? AWARDED_CONNECTOR_OPACITY : JOURNEY_CONNECTOR_OPACITY,
+        });
         if (path) {
           paths.push(path);
         }
