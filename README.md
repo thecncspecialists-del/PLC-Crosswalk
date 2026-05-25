@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # The Machinists Institute - PLC Crosswalk
 
 Admin-only web application for transcript ingestion, prior-learning-credit mapping, evidence tracking, and admin/student report export.
@@ -6,11 +5,11 @@ Admin-only web application for transcript ingestion, prior-learning-credit mappi
 ## Team Access
 
 - Primary access mode is a shared hosted URL where coworkers sign in through the browser.
-- Local installation is supported as a fallback only.
+- Local runtime is disabled by default. Production at `https://plc.thecnc.network` is the source of truth.
 - Day-to-day hosted usage guide: `docs/DAILY_USE_REMOTE.md`
 - GitHub/Vercel setup guide: `docs/GITHUB_VERCEL_SETUP.md`
 - Local fallback install guide: `COWORKER_INSTALL_GUIDE.md`
-- One-click local launcher: `Start-PLC-Crosswalk.bat`
+- One-click local launcher: `Start-PLC-Crosswalk.bat` (requires explicit emergency override)
 
 ## Stack
 
@@ -29,6 +28,8 @@ Admin-only web application for transcript ingestion, prior-learning-credit mappi
 
 ## Local Setup
 
+Local app startup is hard-guarded to avoid confusing production and localhost. Use `https://plc.thecnc.network` for normal work.
+
 1. Install dependencies:
 
 ```bash
@@ -43,6 +44,7 @@ cp .env.example .env
 
 Set `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
 Optional: set `BEEKEEPER_LAUNCH_URL` (URI or Windows absolute path) to enable one-click launch from Settings.
+If you change `ADMIN_EMAIL` or `ADMIN_PASSWORD`, run `npm run db:seed` again so the local admin account matches `.env`.
 
 3. Initialize Prisma schema:
 
@@ -51,9 +53,10 @@ npm run db:migrate
 npm run db:seed
 ```
 
-4. Start the app:
+4. Start the app only for an explicit emergency local run:
 
 ```bash
+$env:PLC_ALLOW_LOCAL_RUNTIME="1"
 npm run dev
 ```
 
@@ -69,6 +72,9 @@ Open `http://localhost:3000/sign-in` and sign in with `ADMIN_EMAIL` / `ADMIN_PAS
 - `npm run test` - run unit tests.
 - `npm run test:e2e` - run Playwright smoke tests.
 - `npm run lint` - run lint checks.
+- `npm run local:stop` - stop local app listeners and the local Prisma dev server.
+- `npm run production:repair-transcripts:dry-run` - inspect production transcript PDF repair using `.env.production.local`.
+- `npm run production:repair-transcripts` - apply the production transcript PDF repair.
 
 ## Notes
 
@@ -91,9 +97,6 @@ Open `http://localhost:3000/sign-in` and sign in with `ADMIN_EMAIL` / `ADMIN_PAS
 4. Deploy on Vercel (build command: `npm run build`).
 5. Run DB migration in production: `npx prisma migrate deploy`.
 6. Bootstrap coworker/admin accounts with `npm run user:create-admin`.
+7. For production transcript storage repair, create `.env.production.local` with production `DATABASE_URL`, `AUTH_URL`/`NEXTAUTH_URL`, and `S3_*`; then run `npm run production:repair-transcripts:dry-run` before `npm run production:repair-transcripts`.
 
 See [PRODUCTION_RUNBOOK.md](./PRODUCTION_RUNBOOK.md) for the full operational checklist.
-=======
-# PLC-Crosswalk
-PLC Crosswalk is built to turn transcript review into a faster, cleaner decision workflow.
->>>>>>> 8ee9e963f0e4ec8849e63baff45719f9e6d746e4

@@ -30,6 +30,7 @@ export function QuickGenerateSearch({ initialQuery }: QuickGenerateSearchProps) 
         name="q"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
+        aria-label="Search transcripts for report generation"
         placeholder="Search student, ref, institution, transcript ID..."
         className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
       />

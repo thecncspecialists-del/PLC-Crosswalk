@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildSettingsPortalHref,
   normalizeBeekeeperLaunchUrl,
   normalizeSettingsPortalQuery,
   parseDatabaseConnectionInfo,
@@ -40,6 +41,32 @@ describe("normalizeSettingsPortalQuery", () => {
     expect(normalized.pageSize).toBe(25);
     expect(normalized.sort).toBe("default");
     expect(normalized.issues).toEqual(["invalid_table", "invalid_page", "invalid_page_size", "invalid_sort"]);
+  });
+});
+
+describe("buildSettingsPortalHref", () => {
+  it("builds canonical settings portal URLs", () => {
+    const href = buildSettingsPortalHref({
+      table: "reports",
+      page: 2,
+      pageSize: 10,
+      sort: "asc",
+      filter: "student ref",
+    });
+
+    expect(href).toBe("/settings?table=reports&page=2&pageSize=10&sort=asc&filter=student+ref");
+  });
+
+  it("omits blank filters and clamps pages", () => {
+    const href = buildSettingsPortalHref({
+      table: "transcripts",
+      page: -3,
+      pageSize: 25,
+      sort: "default",
+      filter: "   ",
+    });
+
+    expect(href).toBe("/settings?table=transcripts&page=1&pageSize=25&sort=default");
   });
 });
 

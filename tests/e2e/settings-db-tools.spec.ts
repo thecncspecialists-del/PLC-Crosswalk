@@ -1,12 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-async function signInAsAdmin(page: import("@playwright/test").Page) {
-  await page.goto("/sign-in");
-  await page.locator('input[name="email"]').fill(process.env.ADMIN_EMAIL ?? "admin@machinists.institute");
-  await page.locator('input[name="password"]').fill(process.env.ADMIN_PASSWORD ?? "ChangeMe123!");
-  await page.getByRole("button", { name: "Sign In" }).click();
-  await expect(page).toHaveURL(/\/transcripts/);
-}
+import { signInAsAdmin } from "./helpers/admin";
 
 test("settings shows database tools, table controls, and Beekeeper launch state", async ({ page }) => {
   await signInAsAdmin(page);
@@ -36,4 +30,15 @@ test("settings shows database tools, table controls, and Beekeeper launch state"
   } else {
     await expect(page.getByRole("button", { name: "Open Beekeeper" })).toBeDisabled();
   }
+});
+
+test("settings replaces invalid query params with canonical values", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/settings?table=notatable&page=-9&pageSize=999&sort=sideways&filter=admin");
+
+  await expect(page).toHaveURL(/table=transcripts/);
+  await expect(page).toHaveURL(/page=1/);
+  await expect(page).toHaveURL(/pageSize=25/);
+  await expect(page).toHaveURL(/sort=default/);
+  await expect(page).toHaveURL(/filter=admin/);
 });

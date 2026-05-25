@@ -54,6 +54,8 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
 
   const isExistingMode = uploadMode === "existing";
   const existingInstitutionName = activeRecord?.latestInstitutionName ?? "Unknown Institution";
+  const needsExistingRecord = isExistingMode && !activeRecord;
+  const submitHelpId = "transcript-upload-submit-help";
 
   return (
     <form action={action} className="grid gap-3 rounded border border-slate-200 bg-white p-4">
@@ -105,12 +107,14 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
               type="search"
               value={recordSearch}
               onChange={(event) => setRecordSearch(event.target.value)}
+              aria-label="Search existing student records"
               placeholder="Search existing records..."
               className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
             />
             <select
               required
               value={selectedRecordId}
+              aria-label="Select existing student record"
               onChange={(event) => {
                 const nextId = event.target.value;
                 setSelectedRecordId(nextId);
@@ -145,6 +149,11 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
               )}
             </select>
             <p className="text-xs text-slate-600">Existing record upload appends to the selected record.</p>
+            {needsExistingRecord ? (
+              <p id={submitHelpId} className="text-xs font-medium text-amber-700">
+                Select an existing student record before updating.
+              </p>
+            ) : null}
           </div>
           <input type="hidden" name="studentFirstName" value={activeRecord?.firstName ?? ""} />
           <input type="hidden" name="studentLastName" value={activeRecord?.lastName ?? ""} />
@@ -158,6 +167,7 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
             name="studentFirstName"
             value={studentFirstName}
             onChange={(event) => setStudentFirstName(event.target.value)}
+            aria-label="Student first name"
             placeholder="Student first name"
             className="rounded border border-slate-300 px-3 py-2 text-sm"
           />
@@ -166,6 +176,7 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
             name="studentLastName"
             value={studentLastName}
             onChange={(event) => setStudentLastName(event.target.value)}
+            aria-label="Student last name"
             placeholder="Student last name"
             className="rounded border border-slate-300 px-3 py-2 text-sm"
           />
@@ -173,6 +184,7 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
             name="studentRef"
             value={studentRef}
             onChange={(event) => setStudentRef(event.target.value)}
+            aria-label="Student reference"
             placeholder="Student reference (optional)"
             className="rounded border border-slate-300 px-3 py-2 text-sm"
           />
@@ -181,6 +193,7 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
             name="institutionName"
             value={institutionName}
             onChange={(event) => setInstitutionName(event.target.value)}
+            aria-label="Institution name"
             placeholder="Institution name"
             className="rounded border border-slate-300 px-3 py-2 text-sm"
           />
@@ -210,8 +223,10 @@ export function TranscriptUploadForm({ action, existingRecords }: TranscriptUplo
       </div>
 
       <SubmitButton
-        disabled={isExistingMode && !activeRecord}
+        aria-describedby={needsExistingRecord ? submitHelpId : undefined}
+        disabled={needsExistingRecord}
         className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        title={needsExistingRecord ? "Select an existing student record before updating." : undefined}
       >
         {isExistingMode ? "Update" : "Upload"}
       </SubmitButton>

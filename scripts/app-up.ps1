@@ -10,6 +10,10 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $npmPath = "C:\Program Files\nodejs\npm.cmd"
 $npxPath = "C:\Program Files\nodejs\npx.cmd"
 
+if ($env:PLC_ALLOW_LOCAL_RUNTIME -ne "1") {
+  throw "Local PLC Crosswalk runtime is disabled. Use https://plc.thecnc.network. Set PLC_ALLOW_LOCAL_RUNTIME=1 only for an explicit emergency local run."
+}
+
 function Write-Step {
   param([string]$Message)
   Write-Host "[app-up] $Message"

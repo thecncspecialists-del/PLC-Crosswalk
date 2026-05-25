@@ -233,6 +233,7 @@ export function MappingCourseEditor({
               type="search"
               value={catalogSearch}
               onChange={(event) => setCatalogSearch(event.target.value)}
+              aria-label="Search selected program catalog"
               placeholder="Search selected program catalog..."
               className="w-full max-w-64 rounded border border-slate-300 px-2 py-1 text-xs"
             />
@@ -282,6 +283,7 @@ export function MappingCourseEditor({
                           checked={checked}
                           disabled={locked}
                           onChange={() => toggleSelection(course)}
+                          aria-label={`Select ${courseLabel}`}
                           className={checkboxClassName}
                         />
                       </td>
@@ -306,6 +308,7 @@ export function MappingCourseEditor({
                             }))
                           }
                           disabled={!checked || locked}
+                          aria-label={`Awarded hours for ${courseLabel}`}
                           className="w-24 rounded border border-slate-300 px-2 py-1 text-xs disabled:bg-slate-100"
                           placeholder={course.creditHours == null ? "-" : String(course.creditHours)}
                         />

@@ -3,6 +3,8 @@
 import { type KeyboardEvent, type ReactNode, useId, useRef, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { useMappingDirtyGuard } from "@/components/mapping/mapping-dirty-guard";
+
 type MappingWorkspaceToggleProps = {
   mappingPane: ReactNode;
   previewPane: ReactNode;
@@ -18,6 +20,7 @@ export function MappingWorkspaceToggle({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const { confirmDiscardChanges } = useMappingDirtyGuard();
   const activeView = searchParams.get("workspace") === "preview" ? "preview" : initialView;
   const tabSetId = useId();
   const mappingButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -30,7 +33,11 @@ export function MappingWorkspaceToggle({
 
   function setView(nextView: "mapping" | "preview") {
     if (nextView === activeView) {
-      return;
+      return true;
+    }
+
+    if (!confirmDiscardChanges()) {
+      return false;
     }
 
     const params = new URLSearchParams(searchParams.toString());
@@ -44,6 +51,7 @@ export function MappingWorkspaceToggle({
     startTransition(() => {
       router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
     });
+    return true;
   }
 
   function focusTab(view: "mapping" | "preview") {
@@ -58,22 +66,25 @@ export function MappingWorkspaceToggle({
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
       event.preventDefault();
       const nextView = currentView === "mapping" ? "preview" : "mapping";
-      setView(nextView);
-      focusTab(nextView);
+      if (setView(nextView)) {
+        focusTab(nextView);
+      }
       return;
     }
 
     if (event.key === "Home") {
       event.preventDefault();
-      setView("mapping");
-      focusTab("mapping");
+      if (setView("mapping")) {
+        focusTab("mapping");
+      }
       return;
     }
 
     if (event.key === "End") {
       event.preventDefault();
-      setView("preview");
-      focusTab("preview");
+      if (setView("preview")) {
+        focusTab("preview");
+      }
     }
   }
 

@@ -76,6 +76,7 @@ export function SelectedExternalCoursePanel({
               name="courseCode"
               value={courseCode}
               onChange={(event) => setCourseCode(event.target.value)}
+              aria-label="External course code"
               placeholder="Course code"
               className="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
             />
@@ -83,6 +84,7 @@ export function SelectedExternalCoursePanel({
               name="termLabel"
               value={termLabel}
               onChange={(event) => setTermLabel(event.target.value)}
+              aria-label="External course term"
               placeholder="Term"
               className="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
             />
@@ -93,6 +95,7 @@ export function SelectedExternalCoursePanel({
             name="title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+            aria-label="External course title"
             placeholder="Course title"
             className="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
           />
@@ -103,6 +106,7 @@ export function SelectedExternalCoursePanel({
               value={credits}
               onChange={(event) => setCredits(event.target.value)}
               inputMode="decimal"
+              aria-label="External course credits"
               placeholder="Credits"
               className="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
             />
@@ -110,6 +114,7 @@ export function SelectedExternalCoursePanel({
               name="grade"
               value={grade}
               onChange={(event) => setGrade(event.target.value)}
+              aria-label="External course grade"
               placeholder="Grade"
               className="rounded border border-slate-300 bg-white px-2 py-1 text-sm"
             />

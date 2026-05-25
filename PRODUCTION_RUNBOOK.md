@@ -56,6 +56,26 @@ npm run user:create-admin -- --email "<email>" --name "<name>" --temp-password "
    - generate and download both report types
    - verify health endpoint: `/api/health`
 
+## 3.1) Production Transcript Storage Repair
+
+Use this path when production has transcript records but PDF previews show `Transcript file not found in storage`.
+
+1. Create a local `.env.production.local` file from the production host settings. It must include production `DATABASE_URL`, `AUTH_URL` or `NEXTAUTH_URL=https://plc.thecnc.network`, `STORAGE_PROVIDER=s3`, and all `S3_*` values.
+2. Confirm the local source PDFs are in `C:\Users\thecn\Codex_002`.
+3. Run the dry run:
+
+```powershell
+npm run production:repair-transcripts:dry-run
+```
+
+4. If the summary only lists expected missing storage objects and the missing Whatcom record, apply:
+
+```powershell
+npm run production:repair-transcripts
+```
+
+5. Verify production transcript preview tabs, especially Cuomo and Whatcom. This repair uploads files to production storage and avoids the normal upload UI so existing extracted courses are not duplicated.
+
 ## 4) Repository and Release Controls
 
 Configure GitHub branch protection on `main`:
@@ -117,6 +137,7 @@ Policy:
 1. Confirm `STORAGE_PROVIDER=s3`.
 2. Verify `S3_*` credentials, endpoint, region, and bucket.
 3. Confirm bucket policy allows application read/write.
+4. If legacy transcript rows contain relative keys like `transcripts/...`, run the production transcript storage repair and deploy the storage compatibility code.
 
 ### D) Rollback
 

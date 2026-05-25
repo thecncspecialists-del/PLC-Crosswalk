@@ -13,7 +13,7 @@ import { formatGrade } from "@/lib/grade-format";
 import { buildMappingSuggestions } from "@/lib/matcher";
 import { requireAdminUser } from "@/lib/permissions";
 import { deleteStoredFile } from "@/lib/storage";
-import { createTranscriptFromUpload } from "@/lib/transcript-upload";
+import { createTranscriptFromUpload, validateTranscriptUploadFile } from "@/lib/transcript-upload";
 import {
   createExternalCourseSchema,
   deleteExternalCourseSchema,
@@ -71,17 +71,27 @@ export async function uploadTranscriptAction(formData: FormData) {
   const adminUser = await requireAdminUser();
 
   const file = formData.get("file");
-  if (!(file instanceof File)) {
+  const fileValidation = await validateTranscriptUploadFile(file);
+  if (!fileValidation.ok) {
     await recordActionHistory({
       actor: adminUser,
       actionType: "transcript_upload",
-      description: "Transcript upload was skipped because no PDF file was submitted.",
+      description:
+        fileValidation.notice === "upload_missing_file"
+          ? "Transcript upload was skipped because no PDF file was submitted."
+          : "Transcript upload was rejected because the submitted file was not a valid PDF.",
       area: "transcripts",
       affectedType: "transcript",
       status: ActionHistoryStatus.WARNING,
+      metadata: {
+        notice: fileValidation.notice,
+        fileName: file instanceof File ? file.name : null,
+        fileType: file instanceof File ? file.type : null,
+      },
     });
-    return;
+    redirect(`/transcripts?notice=${fileValidation.notice}`);
   }
+  const uploadFile = fileValidation.file;
 
   const parsedMetadata = uploadTranscriptSchema.safeParse({
     uploadMode: String(formData.get("uploadMode") ?? "new"),
@@ -101,17 +111,17 @@ export async function uploadTranscriptAction(formData: FormData) {
       affectedType: "transcript",
       status: ActionHistoryStatus.WARNING,
       metadata: {
-        fileName: file.name,
+        fileName: uploadFile.name,
         issues: parsedMetadata.error.issues.map((issue) => issue.path.join(".")),
       },
     });
-    return;
+    redirect("/transcripts?notice=upload_invalid_metadata");
   }
 
   let uploadResult: Awaited<ReturnType<typeof createTranscriptFromUpload>>;
   try {
     uploadResult = await createTranscriptFromUpload({
-      file,
+      file: uploadFile,
       input: parsedMetadata.data,
     });
   } catch (error) {
@@ -123,12 +133,12 @@ export async function uploadTranscriptAction(formData: FormData) {
       affectedType: "transcript",
       status: ActionHistoryStatus.ERROR,
       metadata: {
-        fileName: file.name,
+        fileName: uploadFile.name,
         uploadMode: parsedMetadata.data.uploadMode,
         errorName: error instanceof Error ? error.name : "UnknownError",
       },
     });
-    return;
+    redirect("/transcripts?notice=upload_failed");
   }
 
   await recordActionHistory({
@@ -143,7 +153,7 @@ export async function uploadTranscriptAction(formData: FormData) {
     affectedId: uploadResult.transcriptId,
     status: uploadResult.extractedCourses > 0 ? ActionHistoryStatus.SUCCESS : ActionHistoryStatus.WARNING,
     metadata: {
-      fileName: file.name,
+      fileName: uploadFile.name,
       uploadMode: parsedMetadata.data.uploadMode,
       transcriptFileId: uploadResult.transcriptFileId,
       parserStatus: uploadResult.parserStatus,

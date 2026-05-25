@@ -1,23 +1,25 @@
 import { expect, test } from "@playwright/test";
 
-async function signInAsAdmin(page: import("@playwright/test").Page) {
-  await page.goto("/sign-in");
-  await page.locator('input[name="email"]').fill(process.env.ADMIN_EMAIL ?? "admin@machinists.institute");
-  await page.locator('input[name="password"]').fill(process.env.ADMIN_PASSWORD ?? "ChangeMe123!");
-  await page.getByRole("button", { name: "Sign In" }).click();
-  await expect(page).toHaveURL(/\/transcripts/);
+import { signInAsAdmin } from "./helpers/admin";
+
+async function openSeededMappingTranscript(page: import("@playwright/test").Page) {
+  await page.goto("/transcripts?q=Cuomo");
+
+  const reviewLinks = page.getByRole("link", { name: "Review" });
+  const reviewCount = await reviewLinks.count();
+  test.skip(reviewCount === 0, "No seeded transcript rows available to validate the mapping workspace.");
+
+  await reviewLinks.first().click();
+  await expect(page).toHaveURL(/\/transcripts\/[^/?]+/);
+  test.skip(
+    (await page.getByRole("tab", { name: "Catalog Mapping" }).count()) === 0,
+    "Selected transcript does not have a mapping workspace.",
+  );
 }
 
 test("mapping workspace toggle opens transcript preview and preserves view state", async ({ page }) => {
   await signInAsAdmin(page);
-  await page.goto("/transcripts");
-
-  const reviewLinks = page.getByRole("link", { name: "Review" });
-  const reviewCount = await reviewLinks.count();
-  test.skip(reviewCount === 0, "No transcript rows available to validate workspace toggle.");
-
-  await reviewLinks.first().click();
-  await expect(page).toHaveURL(/\/transcripts\/[^/?]+/);
+  await openSeededMappingTranscript(page);
 
   const mappingTab = page.getByRole("tab", { name: "Catalog Mapping" });
   const previewTab = page.getByRole("tab", { name: "Transcript Preview" });
@@ -58,4 +60,31 @@ test("mapping workspace toggle opens transcript preview and preserves view state
   await expect(mappingTab).toHaveAttribute("aria-selected", "true");
   await expect(page).not.toHaveURL(/workspace=preview/);
   await expect(page.getByRole("heading", { name: "Map to Catalog Course(s)" })).toBeVisible();
+});
+
+test("mapping workspace warns before discarding dirty mapping edits", async ({ page }) => {
+  await signInAsAdmin(page);
+  await openSeededMappingTranscript(page);
+
+  const rationale = page.getByLabel("Mapping Rationale");
+  test.skip((await rationale.count()) === 0, "Selected transcript does not have a mapping editor.");
+
+  await expect(page.getByRole("group", { name: /Mapping decision status/ })).toBeVisible();
+  await rationale.fill(`Dirty guard e2e ${Date.now()}`);
+
+  const mappingTab = page.getByRole("tab", { name: "Catalog Mapping" });
+  const previewTab = page.getByRole("tab", { name: "Transcript Preview" });
+
+  page.once("dialog", async (dialog) => {
+    expect(dialog.message()).toContain("unsaved mapping changes");
+    await dialog.dismiss();
+  });
+  await previewTab.click();
+  await expect(mappingTab).toHaveAttribute("aria-selected", "true");
+
+  page.once("dialog", async (dialog) => {
+    await dialog.accept();
+  });
+  await previewTab.click();
+  await expect(previewTab).toHaveAttribute("aria-selected", "true");
 });

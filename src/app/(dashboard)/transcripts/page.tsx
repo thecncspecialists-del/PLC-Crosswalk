@@ -8,15 +8,36 @@ import { deleteTranscriptAction, uploadTranscriptAction } from "@/server/actions
 
 export const dynamic = "force-dynamic";
 
+const WALKTHROUGH_URL =
+  "https://scribehow.com/embed/Managing_Student_Transcripts__ixYdjdMFQn-gUQIGkflpVA?removeLogo=true&as=video";
+
 type TranscriptsPageProps = {
   searchParams: Promise<{
+    notice?: string;
     q?: string;
   }>;
 };
 
+function uploadNoticeMessage(notice: string | undefined) {
+  if (notice === "upload_missing_file") {
+    return "Choose a transcript PDF before uploading.";
+  }
+  if (notice === "upload_invalid_file_type") {
+    return "Upload a valid PDF transcript file.";
+  }
+  if (notice === "upload_invalid_metadata") {
+    return "Complete the required student, institution, and record fields before uploading.";
+  }
+  if (notice === "upload_failed") {
+    return "Transcript upload failed before a record could be created. Check the PDF and try again.";
+  }
+  return null;
+}
+
 export default async function TranscriptsPage({ searchParams }: TranscriptsPageProps) {
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
+  const uploadNotice = uploadNoticeMessage(params.notice);
 
   const transcripts = await db.transcript.findMany({
     where: query
@@ -55,6 +76,12 @@ export default async function TranscriptsPage({ searchParams }: TranscriptsPageP
 
   return (
     <section className="grid gap-6">
+      {uploadNotice ? (
+        <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {uploadNotice}
+        </p>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-stretch">
         <div className="max-w-xl lg:max-w-none">
           <TranscriptUploadForm
@@ -75,15 +102,24 @@ export default async function TranscriptsPage({ searchParams }: TranscriptsPageP
           </p>
           <div className="mt-3 h-[480px] overflow-hidden rounded border border-slate-200 lg:min-h-0 lg:flex-1">
             <iframe
-              src="https://scribehow.com/embed/Managing_Student_Transcripts__ixYdjdMFQn-gUQIGkflpVA?removeLogo=true&as=video"
+              src={WALKTHROUGH_URL}
               title="Managing Student Transcripts Walkthrough"
               width="100%"
               height="100%"
               className="h-full w-full"
               allow="fullscreen"
+              loading="lazy"
               style={{ border: 0 }}
             />
           </div>
+          <a
+            href={WALKTHROUGH_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex text-xs font-semibold text-slate-700 underline"
+          >
+            Open walkthrough
+          </a>
         </div>
       </div>
 
@@ -94,6 +130,7 @@ export default async function TranscriptsPage({ searchParams }: TranscriptsPageP
             <input
               type="search"
               name="q"
+              aria-label="Search transcript queue"
               defaultValue={query}
               placeholder="Search student, institution, transcript ID..."
               className="min-w-0 flex-1 rounded border border-slate-300 px-3 py-2 text-sm sm:w-80 sm:flex-none"

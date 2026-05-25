@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MappingFormSubmitButton } from "@/components/mapping/mapping-form-submit-button";
+import { MappingDirtyGuard } from "@/components/mapping/mapping-dirty-guard";
 import { MappingWorkspaceToggle } from "@/components/mapping/mapping-workspace-toggle";
 import { PlanApprovalButton } from "@/components/mapping/plan-approval-button";
 import { MappingCourseEditor } from "@/components/mapping/mapping-course-editor";
@@ -389,6 +390,7 @@ export default async function TranscriptDetailPage({ params, searchParams }: Tra
   });
 
   return (
+    <MappingDirtyGuard formId={mappingFormId ?? undefined}>
     <section className="grid gap-4">
       <div className="flex items-center justify-between gap-3">
         <BackButton fallbackHref="/transcripts" label="Back to Transcript Queue" />
@@ -425,6 +427,7 @@ export default async function TranscriptDetailPage({ params, searchParams }: Tra
                   type="text"
                   name="institutionName"
                   defaultValue={transcript.institution.name}
+                  aria-label="Institution name"
                   className="h-8 w-72 max-w-full rounded border border-slate-300 px-2 text-xs text-slate-800"
                 />
                 <button
@@ -530,7 +533,12 @@ export default async function TranscriptDetailPage({ params, searchParams }: Tra
                       : `${completionStats.unreviewed} course${completionStats.unreviewed === 1 ? "" : "s"} still need a decision before final approval.`}
                 </p>
                 {!isAddMode && selectedRow ? (
-                  <div className="inline-grid h-9 w-[18rem] grid-cols-3 items-center rounded border border-slate-300 bg-white p-0.5">
+                  <fieldset className="min-w-0">
+                    <legend className="sr-only">
+                      Mapping decision status for {selectedRow.externalCourse.courseCode ?? "N/A"}{" "}
+                      {selectedRow.externalCourse.title}
+                    </legend>
+                    <div className="inline-grid h-9 w-[18rem] grid-cols-3 items-center rounded border border-slate-300 bg-white p-0.5">
                     <form action={saveNoCreditDecisionAction} className="h-full">
                       <input type="hidden" name="transcriptId" value={transcript.id} />
                       <input type="hidden" name="externalCourseId" value={selectedRow.externalCourse.id} />
@@ -606,7 +614,8 @@ export default async function TranscriptDetailPage({ params, searchParams }: Tra
                         Credit
                       </SubmitButton>
                     </form>
-                  </div>
+                    </div>
+                  </fieldset>
                 ) : null}
               </div>
             </div>
@@ -776,5 +785,6 @@ export default async function TranscriptDetailPage({ params, searchParams }: Tra
         </ul>
       </div>
     </section>
+    </MappingDirtyGuard>
   );
 }

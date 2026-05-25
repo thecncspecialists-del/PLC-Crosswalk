@@ -32,6 +32,16 @@ function isS3Reference(reference: string) {
 }
 
 function parseS3Reference(reference: string) {
+  if (!isS3Reference(reference)) {
+    if (!s3Bucket) {
+      throw new Error(`Cannot resolve S3 storage reference without S3_BUCKET: ${reference}`);
+    }
+    return {
+      bucket: s3Bucket,
+      key: reference.replace(/^\/+/, ""),
+    };
+  }
+
   const withoutPrefix = reference.slice("s3://".length);
   const separatorIndex = withoutPrefix.indexOf("/");
   if (separatorIndex < 1 || separatorIndex === withoutPrefix.length - 1) {
@@ -148,7 +158,7 @@ export function getAbsoluteStoragePath(reference: string) {
 }
 
 export async function readStoredFile(reference: string) {
-  if (isS3Reference(reference)) {
+  if (isS3Reference(reference) || storageProvider === "s3") {
     const { bucket, key } = parseS3Reference(reference);
     const s3 = getS3Client();
     const response = await s3.send(
@@ -170,7 +180,7 @@ export async function readStoredFile(reference: string) {
 }
 
 export async function deleteStoredFile(reference: string) {
-  if (isS3Reference(reference)) {
+  if (isS3Reference(reference) || storageProvider === "s3") {
     const { bucket, key } = parseS3Reference(reference);
     const s3 = getS3Client();
     await s3.send(

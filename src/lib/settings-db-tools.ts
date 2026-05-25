@@ -40,6 +40,14 @@ export type NormalizedSettingsPortalQuery = {
   issues: SettingsPortalIssue[];
 };
 
+export type SettingsPortalHrefInput = {
+  table: SettingsPortalTable;
+  page: number;
+  pageSize: SettingsPortalPageSize;
+  sort: SettingsPortalSort;
+  filter: string;
+};
+
 export type SettingsPortalColumn = {
   key: string;
   label: string;
@@ -337,6 +345,18 @@ export function normalizeSettingsPortalQuery(input: SettingsPortalQueryInput): N
   const filter = (input.filter ?? "").trim().slice(0, 120);
 
   return { table, page, pageSize, sort, filter, issues };
+}
+
+export function buildSettingsPortalHref(args: SettingsPortalHrefInput) {
+  const next = new URLSearchParams();
+  next.set("table", args.table);
+  next.set("page", String(Math.max(1, args.page)));
+  next.set("pageSize", String(args.pageSize));
+  next.set("sort", args.sort);
+  if (args.filter.trim().length > 0) {
+    next.set("filter", args.filter.trim().slice(0, 120));
+  }
+  return `/settings?${next.toString()}`;
 }
 
 export type BeekeeperConnectionInfo = {

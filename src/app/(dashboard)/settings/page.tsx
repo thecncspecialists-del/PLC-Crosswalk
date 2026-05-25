@@ -2,16 +2,16 @@ import Link from "next/link";
 
 import { auth } from "@/auth";
 import { BeekeeperHelper } from "@/components/settings/beekeeper-helper";
+import { SettingsCanonicalUrl } from "@/components/settings/settings-canonical-url";
 import { SettingsPortalControls } from "@/components/settings/settings-portal-controls";
 import {
+  buildSettingsPortalHref,
   loadSettingsPortalData,
   normalizeSettingsPortalQuery,
   parseDatabaseConnectionInfo,
   recordSettingsPortalIssues,
   SETTINGS_PORTAL_PAGE_SIZES,
   SETTINGS_PORTAL_TABLES,
-  type SettingsPortalPageSize,
-  type SettingsPortalSort,
   type SettingsPortalTable,
 } from "@/lib/settings-db-tools";
 
@@ -37,24 +37,6 @@ const TABLE_LABELS: Record<SettingsPortalTable, string> = {
   users: "Users",
   actionHistory: "Action History",
 };
-
-function settingsHref(args: {
-  table: SettingsPortalTable;
-  page: number;
-  pageSize: SettingsPortalPageSize;
-  sort: SettingsPortalSort;
-  filter: string;
-}) {
-  const next = new URLSearchParams();
-  next.set("table", args.table);
-  next.set("page", String(args.page));
-  next.set("pageSize", String(args.pageSize));
-  next.set("sort", args.sort);
-  if (args.filter.length > 0) {
-    next.set("filter", args.filter);
-  }
-  return `/settings?${next.toString()}`;
-}
 
 function issueMessage(issues: string[]) {
   if (issues.length === 0) {
@@ -122,9 +104,20 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const hasPrevPage = dbPortal.portal.page > 1;
   const hasNextPage = dbPortal.portal.page < dbPortal.portal.totalPages;
   const invalidQueryMessage = issueMessage(normalizedPortalQuery.issues);
+  const canonicalSettingsHref = buildSettingsPortalHref({
+    table: dbPortal.portal.table,
+    page: dbPortal.portal.page,
+    pageSize: dbPortal.portal.pageSize,
+    sort: normalizedPortalQuery.sort,
+    filter: normalizedPortalQuery.filter,
+  });
+  const shouldCanonicalizeSettingsUrl =
+    normalizedPortalQuery.issues.length > 0 || dbPortal.portal.page !== normalizedPortalQuery.page;
 
   return (
     <section className="grid min-w-0 gap-4">
+      <SettingsCanonicalUrl href={canonicalSettingsHref} replace={shouldCanonicalizeSettingsUrl} />
+
       <div className="rounded border border-slate-200 bg-white p-4">
         <h1 className="text-base font-semibold text-slate-900">Settings</h1>
         <p className="mt-1 text-sm text-slate-600">Admin-level workspace controls and environment details.</p>
@@ -195,7 +188,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <div className="flex items-center gap-2">
               {hasPrevPage ? (
                 <Link
-                  href={settingsHref({
+                  href={buildSettingsPortalHref({
                     table: dbPortal.portal.table,
                     page: dbPortal.portal.page - 1,
                     pageSize: dbPortal.portal.pageSize,
@@ -211,7 +204,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               )}
               {hasNextPage ? (
                 <Link
-                  href={settingsHref({
+                  href={buildSettingsPortalHref({
                     table: dbPortal.portal.table,
                     page: dbPortal.portal.page + 1,
                     pageSize: dbPortal.portal.pageSize,

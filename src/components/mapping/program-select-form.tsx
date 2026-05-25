@@ -30,6 +30,7 @@ export function ProgramSelectForm({
       <select
         name="programId"
         defaultValue={selectedProgramId ?? ""}
+        aria-label="Selected program"
         onChange={(event) => {
           const nextProgramId = event.currentTarget.value;
           const isProgramSwitch = Boolean(selectedProgramId) && nextProgramId !== selectedProgramId;

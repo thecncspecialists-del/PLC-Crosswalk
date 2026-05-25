@@ -65,6 +65,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             required
             type="email"
             name="email"
+            aria-label="Email address"
             placeholder="you@your-organization.com"
             defaultValue={isDev ? devEmail : undefined}
             className="rounded border border-slate-300 px-3 py-2 text-sm"
@@ -73,6 +74,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             required
             type="password"
             name="password"
+            aria-label="Password"
             placeholder="Enter your password"
             defaultValue={isDev ? devPassword : undefined}
             className="rounded border border-slate-300 px-3 py-2 text-sm"

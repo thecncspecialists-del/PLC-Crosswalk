@@ -1,12 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-async function signInAsAdmin(page: import("@playwright/test").Page) {
-  await page.goto("/sign-in");
-  await page.locator('input[name="email"]').fill(process.env.ADMIN_EMAIL ?? "admin@machinists.institute");
-  await page.locator('input[name="password"]').fill(process.env.ADMIN_PASSWORD ?? "ChangeMe123!");
-  await page.getByRole("button", { name: "Sign In" }).click();
-  await expect(page).toHaveURL(/\/transcripts/);
-}
+import { signInAsAdmin } from "./helpers/admin";
 
 async function expectNoPageOverflow(page: import("@playwright/test").Page) {
   const dimensions = await page.evaluate(() => ({

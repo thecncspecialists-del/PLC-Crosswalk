@@ -15,6 +15,22 @@ export type TranscriptUploadResult = {
   suggestions: number;
 };
 
+export type TranscriptUploadNotice =
+  | "upload_missing_file"
+  | "upload_invalid_file_type"
+  | "upload_invalid_metadata"
+  | "upload_failed";
+
+export type TranscriptUploadFileValidation =
+  | {
+      ok: true;
+      file: File;
+    }
+  | {
+      ok: false;
+      notice: Extract<TranscriptUploadNotice, "upload_missing_file" | "upload_invalid_file_type">;
+    };
+
 type CreatedCourse = {
   id: string;
   title: string;
@@ -73,6 +89,39 @@ async function createLegacyMappingSuggestions(transcriptId: string, createdCours
   }
 
   return suggestions.length;
+}
+
+export async function validateTranscriptUploadFile(file: unknown): Promise<TranscriptUploadFileValidation> {
+  if (!(file instanceof File) || file.size === 0 || file.name.trim().length === 0) {
+    return {
+      ok: false,
+      notice: "upload_missing_file",
+    };
+  }
+
+  const normalizedName = file.name.trim().toLowerCase();
+  const normalizedType = file.type.trim().toLowerCase();
+  const hasPdfExtension = normalizedName.endsWith(".pdf");
+  const hasPdfMimeType = normalizedType === "" || normalizedType === "application/pdf";
+  if (!hasPdfExtension || !hasPdfMimeType) {
+    return {
+      ok: false,
+      notice: "upload_invalid_file_type",
+    };
+  }
+
+  const header = Buffer.from(await file.slice(0, 5).arrayBuffer()).toString("utf8");
+  if (header !== "%PDF-") {
+    return {
+      ok: false,
+      notice: "upload_invalid_file_type",
+    };
+  }
+
+  return {
+    ok: true,
+    file,
+  };
 }
 
 export async function createTranscriptFromUpload(args: {
